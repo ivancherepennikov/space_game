@@ -64,13 +64,12 @@ public:
     void draw_field(std::vector<Bullet>& bullets) {
         system("clear");
 
-        // Рисуем поле
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
                     std::cout << "*";
                 } else if (i == y && j == x) {
-                    std::cout << "^";  // Рисуем корабль
+                    std::cout << "^"; 
                 } else {
                     bool bullet_drawn = false;
                     for (Bullet& bullet : bullets) {
@@ -90,14 +89,8 @@ public:
     }
 
     void move(char command) {
-        if ((command == 'w' || command == 'W') && y - 1 > 0) {
-            y--;
-        }
         if ((command == 'a' || command == 'A') && x - 1 > 0) {
             x--;
-        }
-        if ((command == 's' || command == 'S') && y + 1 < height - 1) {
-            y++;
         }
         if ((command == 'd' || command == 'D') && x + 1 < width - 1) {
             x++;
