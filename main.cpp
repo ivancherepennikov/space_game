@@ -29,6 +29,7 @@ class Bullet{
 
         int getX() { return x; }
         int getY() { return y; }
+        bool isActiveStatus() { return isActive; }
 
         void create_bullet(int x_now, int y_now){
             if(!isActive){
@@ -37,17 +38,27 @@ class Bullet{
                 isActive = true;
             }
         }
+
+        void move() {
+            if (isActive) {
+                y--;  // Пуля двигается вверх по оси Y
+                if (y <= 0) {  // Если пуля выходит за верхнюю границу, деактивируем её
+                    isActive = false;
+                }
+            }
+        }
 };
 
 class Spaceship {
 private:
     int x;
     int y;
-    const int width = 50;
-    const int height = 20;
+    const int width = 51;
+    const int height = 21;
 
 public:
-    Spaceship() : x(6), y(8) {}  // начальная позиция корабля   
+    Spaceship() : x(23), y(18) {}  // Центрируем по горизонтали и ставим внизу
+   
 
     void draw_field(Bullet& bullet) {
         system("clear");
@@ -101,6 +112,8 @@ int main() {
         if (command == ' '){
             bullet.create_bullet(spaceship.getX(), spaceship.getY());
         }
+
+        bullet.move();
 
         spaceship.draw_field(bullet);
     }
