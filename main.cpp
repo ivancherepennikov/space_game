@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+#include <vector>
 
 char getch() {
     struct termios oldt, newt;
@@ -16,80 +17,89 @@ char getch() {
     return ch;
 }
 
-class Bullet{
-    private:
-        int x, y;
-        bool isActive;
-    public:
-        Bullet() {
-            x = -1;
-            y = -1;
-            isActive = false;
-        };
+class Bullet {
+private:
+    int x, y;
+    bool isActive;
 
-        int getX() { return x; }
-        int getY() { return y; }
-        bool isActiveStatus() { return isActive; }
+public:
+    Bullet() : x(-1), y(-1), isActive(false) {}
 
-        void create_bullet(int x_now, int y_now){
-            if(!isActive){
-                x = x_now;
-                y = y_now-1;
-                isActive = true;
+    int getX() { return x; }
+    int getY() { return y; }
+    bool isActiveStatus() { return isActive; }
+
+    void create_bullet(int x_now, int y_now) {
+        if (!isActive) {
+            x = x_now;
+            y = y_now - 1; 
+            isActive = true;
+        }
+    }
+
+    void move() {
+        if (isActive) {
+            y--; 
+            if (y <= 0) {  
+                isActive = false;
             }
         }
+    }
 
-        void move() {
-            if (isActive) {
-                y--;  // Пуля двигается вверх по оси Y
-                if (y <= 0) {  // Если пуля выходит за верхнюю границу, деактивируем её
-                    isActive = false;
-                }
-            }
-        }
+    void deactivate() {
+        isActive = false;
+    }
 };
 
 class Spaceship {
 private:
     int x;
     int y;
-    const int width = 51;
-    const int height = 21;
+    const int width = 91;
+    const int height = 41;
 
 public:
-    Spaceship() : x(23), y(18) {}  // Центрируем по горизонтали и ставим внизу
-   
+    Spaceship() : x(40), y(37) {}
 
-    void draw_field(Bullet& bullet) {
+    void draw_field(std::vector<Bullet>& bullets) {
         system("clear");
 
+        // Рисуем поле
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
                     std::cout << "*";
                 } else if (i == y && j == x) {
-                    std::cout << "^";
-                } else if (bullet.getX() == j && bullet.getY() == i) {
-                    std::cout << "!";
+                    std::cout << "^";  // Рисуем корабль
                 } else {
-                    std::cout << " ";
+                    bool bullet_drawn = false;
+                    for (Bullet& bullet : bullets) {
+                        if (bullet.isActiveStatus() && bullet.getX() == j && bullet.getY() == i) {
+                            std::cout << "!";
+                            bullet_drawn = true;
+                            break;
+                        }
+                    }
+                    if (!bullet_drawn) {
+                        std::cout << " ";
+                    }
                 }
             }
             std::cout << std::endl;
         }
     }
 
-    void move(char command){
-        if ((command == 'w' or command == 'W') and y-1 > 0){
+    void move(char command) {
+        if ((command == 'w' || command == 'W') && y - 1 > 0) {
             y--;
         }
-        if ((command == 'a' or command == 'A') and x-1 > 0){
+        if ((command == 'a' || command == 'A') && x - 1 > 0) {
             x--;
         }
-        if ((command == 's' or command == 'S') and y+1 < height-1){
+        if ((command == 's' || command == 'S') && y + 1 < height - 1) {
             y++;
         }
-        if ((command == 'd' or command == 'D') and x+1 < width-1){
+        if ((command == 'd' || command == 'D') && x + 1 < width - 1) {
             x++;
         }
     }
@@ -98,26 +108,32 @@ public:
     int getY() { return y; }
 };
 
-
-
 int main() {
     Spaceship spaceship;
-    Bullet bullet;
-    spaceship.draw_field(bullet); 
-    while (1){
-        char command;
-        command = getchar();
+    std::vector<Bullet> bullets;
+    spaceship.draw_field(bullets);
+
+    while (1) {
+        char command = getch(); 
+
         spaceship.move(command);
 
-        if (command == ' '){
-            bullet.create_bullet(spaceship.getX(), spaceship.getY());
+        if (command == ' ') {
+            Bullet new_bullet;
+            new_bullet.create_bullet(spaceship.getX(), spaceship.getY());
+            bullets.push_back(new_bullet);
         }
 
-        bullet.move();
+        for (auto& bullet : bullets) {
+            bullet.move();
+        }
 
-        spaceship.draw_field(bullet);
+        bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& bullet) {
+            return !bullet.isActiveStatus();
+        }), bullets.end());
+
+        spaceship.draw_field(bullets);
     }
-    
-        
+
     return 0;
 }
