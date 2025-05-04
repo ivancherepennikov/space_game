@@ -17,6 +17,22 @@ char getch() {
     return ch;
 }
 
+class Enemy{
+    private:
+        int x, y;
+        bool isLive;
+
+    public:
+        Enemy(int x_, int y_) : x(x_), y(y_), isLive(true) {}
+        int getX() { return x; }
+        int getY() { return y; }
+        bool state() { return isLive; }
+
+        void kill(){
+            isLive = false;
+        }
+};
+
 class Bullet {
 private:
     int x, y;
@@ -46,12 +62,23 @@ public:
         }
     }
 
+    void kill_enemy(std::vector<Enemy>& enemies){
+        for (auto& enemy: enemies){
+            if (enemy.getX() == x && enemy.getY() == y && enemy.state()) {
+                enemy.kill();
+                isActive = false;  
+                break;     
+            }
+        }
+    }
+    
+
     void deactivate() {
         isActive = false;
     }
 };
 
-class Spaceship {
+class Spaceship { 
 private:
     int x;
     int y;
@@ -61,9 +88,9 @@ private:
 public:
     Spaceship() : x(40), y(37) {}
 
-    void draw_field(std::vector<Bullet>& bullets) {
+    void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies) {
         system("clear");
-
+    
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
@@ -71,15 +98,27 @@ public:
                 } else if (i == y && j == x) {
                     std::cout << "^"; 
                 } else {
-                    bool bullet_drawn = false;
+                    bool drawn = false;
+    
                     for (Bullet& bullet : bullets) {
                         if (bullet.isActiveStatus() && bullet.getX() == j && bullet.getY() == i) {
                             std::cout << "!";
-                            bullet_drawn = true;
+                            drawn = true;
                             break;
                         }
                     }
-                    if (!bullet_drawn) {
+    
+                    if (!drawn) {
+                        for (Enemy& enemy : enemies) {
+                            if (enemy.state() && enemy.getX() == j && enemy.getY() == i) {
+                                std::cout << "@";
+                                drawn = true;
+                                break;
+                            }
+                        }
+                    }
+    
+                    if (!drawn) {
                         std::cout << " ";
                     }
                 }
@@ -87,6 +126,7 @@ public:
             std::cout << std::endl;
         }
     }
+    
 
     void move(char command) {
         if ((command == 'a' || command == 'A') && x - 1 > 0) {
@@ -104,9 +144,21 @@ public:
 int main() {
     Spaceship spaceship;
     std::vector<Bullet> bullets;
-    spaceship.draw_field(bullets);
+
+    std::vector<Enemy> enemies = {
+        Enemy(39, 8),
+        Enemy(40, 3)
+    };  
+    int number_of_emeies = enemies.size();
+
+    spaceship.draw_field(bullets, enemies);
 
     while (1) {
+        if (enemies.empty()){
+            std::cout << "victory";
+            return 0;
+        }
+
         char command = getch(); 
 
         spaceship.move(command);
@@ -119,14 +171,30 @@ int main() {
 
         for (auto& bullet : bullets) {
             bullet.move();
+            bullet.kill_enemy(enemies);
         }
 
         bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& bullet) {
             return !bullet.isActiveStatus();
         }), bullets.end());
 
-        spaceship.draw_field(bullets);
+        bool hasLiveEnemies = false;
+        for (auto& enemy : enemies) {
+            if (enemy.state()) {
+                hasLiveEnemies = true;
+                break;
+            }
+        }
+        if (!hasLiveEnemies) {
+            system("clear");
+            std::cout << "VICTORY! Все враги уничтожены.\n";
+            return 0;
+        }
+
+
+        spaceship.draw_field(bullets, enemies); 
     }
 
     return 0;
 }
+
