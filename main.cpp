@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <vector>
 
+const int width = 91;
+const int height = 41;
+
 char getch() {
     struct termios oldt, newt;
     char ch;
@@ -31,6 +34,18 @@ class Enemy{
         void kill(){
             isLive = false;
         }
+
+        void move_ememy(){
+            if (isLive) {
+                y++;
+                if (y >= height - 1) {
+                    system("clear");
+                    std::cout << "Поражение! Враг достиг края";
+                    exit(0); 
+                }
+            }
+        }
+        
 };
 
 class Bullet {
@@ -82,8 +97,6 @@ class Spaceship {
 private:
     int x;
     int y;
-    const int width = 91;
-    const int height = 41;
 
 public:
     Spaceship() : x(40), y(37) {}
@@ -178,6 +191,10 @@ int main() {
             return !bullet.isActiveStatus();
         }), bullets.end());
 
+        for (auto& enemy : enemies) {
+            enemy.move_ememy();
+        }
+
         bool hasLiveEnemies = false;
         for (auto& enemy : enemies) {
             if (enemy.state()) {
@@ -190,7 +207,6 @@ int main() {
             std::cout << "VICTORY! Все враги уничтожены.\n";
             return 0;
         }
-
 
         spaceship.draw_field(bullets, enemies); 
     }
