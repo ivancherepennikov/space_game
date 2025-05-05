@@ -30,31 +30,43 @@ int generate_random(int min, int max) {
 }
 
 class Enemy {
-protected:
-    int x, y;
-    bool isLive;
-
-public:
-    Enemy(int x_, int y_) : x(x_), y(y_), isLive(true) {}
-    int getX() { return x; }
-    int getY() { return y; }
-    bool state() { return isLive; }
-
-    virtual void kill() {
-        isLive = false;
-    }
-
-    void move_ememy(int turn, int level) {
-        if (turn % 3 == 0 && isLive) {
-            y++;
-            if (y >= height - 1) {
-                system("clear");
-                std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
-                exit(0);
+    protected:
+        int x, y;
+        bool isLive;
+        bool hasAnimationShown;
+    
+    public:
+        Enemy(int x_, int y_) : x(x_), y(y_), isLive(true), hasAnimationShown(false) {}
+    
+        int getX() { return x; }
+        int getY() { return y; }
+        bool state() { return isLive; }
+    
+        virtual void kill() {
+            isLive = false;
+            hasAnimationShown = false; 
+        }
+    
+        void move_ememy(int turn, int level) {
+            if (turn % 3 == 0 && isLive) {
+                y++;
+                if (y >= height - 1) {
+                    system("clear");
+                    std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
+                    exit(0);
+                }
             }
         }
-    }
-};
+    
+        void kill_enemy() {
+            isLive = false;
+            hasAnimationShown = false; 
+        }
+    
+        bool is_destroyed() { return !isLive; } 
+        bool is_animation_shown() { return hasAnimationShown; } 
+        void show_animation() { hasAnimationShown = true; }
+    };    
 
 class Boss : public Enemy {
 private:
@@ -106,20 +118,20 @@ public:
         }
     }
 
-    void kill_enemy(std::vector<Enemy>& enemies, Boss& boss, bool& bossActive){
+    void kill_enemy(std::vector<Enemy>& enemies, Boss& boss, bool& bossActive) {
         for (auto& enemy : enemies) {
             if (enemy.getX() == x && enemy.getY() == y && enemy.state()) {
-                enemy.kill();
-                isActive = false;
+                enemy.kill_enemy(); 
+                isActive = false;  
                 return;
             }
         }
-
+    
         if (bossActive && boss.state() && boss.getX() == x && boss.getY() == y) {
             boss.take_damage();
             if (!boss.state()) bossActive = false;
             isActive = false;
-        }
+        } 
     }
 };
 
@@ -174,6 +186,13 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
                     for (Enemy& enemy : enemies) {
                         if (enemy.state() && enemy.getX() == j && enemy.getY() == i) {
                             std::cout << "@";
+                            drawn = true;
+                            break;
+                        } 
+
+                        else if (enemy.is_destroyed() && !enemy.is_animation_shown() && enemy.getX() <= j && enemy.getX() + 2 >= j && enemy.getY() <= i && enemy.getY() + 2 >= i) {
+                            std::cout << "#";
+                            enemy.show_animation();  
                             drawn = true;
                             break;
                         }
