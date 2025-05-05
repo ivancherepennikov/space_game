@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <vector>
 #include <random>
+#include <algorithm>
 
 const int width = 41;
 const int height = 41;
@@ -11,52 +12,69 @@ const int height = 41;
 char getch() {
     struct termios oldt, newt;
     char ch;
-    tcgetattr(STDIN_FILENO, &oldt);  // Сохраняем текущие настройки терминала
+    tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-    newt.c_lflag &= ~ICANON;  // Отключаем буферизацию ввода
-    newt.c_lflag &= ~ECHO;    // Отключаем вывод символов на экран
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);  // Применяем новые настройки
-    ch = getchar();  // Чтение символа
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);  // Восстанавливаем старые настройки
+    newt.c_lflag &= ~ICANON;
+    newt.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return ch;
 }
 
 int generate_random(int min, int max) {
-    static std::random_device rd;                    
-    static std::mt19937 gen(rd());                     
-    std::uniform_int_distribution<> distrib(min, max); 
-
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(min, max);
     return distrib(gen);
 }
 
+class Enemy {
+protected:
+    int x, y;
+    bool isLive;
 
-class Enemy{
-    private:
-        int x, y;
-        bool isLive;
+public:
+    Enemy(int x_, int y_) : x(x_), y(y_), isLive(true) {}
+    int getX() { return x; }
+    int getY() { return y; }
+    bool state() { return isLive; }
 
-    public:
-        Enemy(int x_, int y_) : x(x_), y(y_), isLive(true) {}
-        int getX() { return x; }
-        int getY() { return y; }
-        bool state() { return isLive; }
+    virtual void kill() {
+        isLive = false;
+    }
 
-        void kill(){
-            isLive = false;
-        }
-
-        void move_ememy(int turn, int level){
-            if (turn % 3 == 0){
-                if (isLive) {
-                    y++;
-                    if (y >= height - 1) {
-                        system("clear");
-                        std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне";
-                        exit(0); 
-                    }
-                }
+    void move_ememy(int turn, int level) {
+        if (turn % 3 == 0 && isLive) {
+            y++;
+            if (y >= height - 1) {
+                system("clear");
+                std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
+                exit(0);
             }
         }
+    }
+};
+
+class Boss : public Enemy {
+private:
+    int health;
+
+public:
+    Boss(int x_, int y_) : Enemy(x_, y_), health(3) {}
+
+    void take_damage() {
+        health--;
+        if (health <= 0) {
+            kill();
+        }
+    }
+
+    void kill() override {
+        isLive = false;
+    }
+
+    int GetHP() { return health; }
 };
 
 class Bullet {
@@ -74,36 +92,38 @@ public:
     void create_bullet(int x_now, int y_now) {
         if (!isActive) {
             x = x_now;
-            y = y_now - 1; 
+            y = y_now - 1;
             isActive = true;
         }
     }
 
     void move() {
         if (isActive) {
-            y--; 
-            if (y <= 0) {  
+            y--;
+            if (y <= 0) {
                 isActive = false;
             }
         }
     }
 
-    void kill_enemy(std::vector<Enemy>& enemies){
-        for (auto& enemy: enemies){
+    void kill_enemy(std::vector<Enemy>& enemies, Boss& boss, bool& bossActive){
+        for (auto& enemy : enemies) {
             if (enemy.getX() == x && enemy.getY() == y && enemy.state()) {
                 enemy.kill();
-                isActive = false;  
-                break;     
+                isActive = false;
+                return;
             }
         }
-    }
-    
-    void deactivate() {
-        isActive = false;
+
+        if (bossActive && boss.state() && boss.getX() == x && boss.getY() == y) {
+            boss.take_damage();
+            if (!boss.state()) bossActive = false;
+            isActive = false;
+        }
     }
 };
 
-class Spaceship { 
+class Spaceship {
 private:
     int x;
     int y;
@@ -112,38 +132,33 @@ public:
     Spaceship() : x(19), y(37) {}
 
     void move(char command) {
-        if ((command == 'a' || command == 'A') && x - 1 > 0) {
-            x--;
-        }
-        if ((command == 'd' || command == 'D') && x + 1 < width - 1) {
-            x++;
-        }
+        if ((command == 'a' || command == 'A') && x - 1 > 0) x--;
+        if ((command == 'd' || command == 'D') && x + 1 < width - 1) x++;
     }
 
     int getX() { return x; }
     int getY() { return y; }
 };
 
-void generate_enemies(std::vector<Enemy>& enemies, int level){
-    int number_of_enemies = level * 5;
-    for (int i = 0; i < number_of_enemies; i++){
-        int x = generate_random(10, width-10);
-        int y = generate_random(1,10);
-        Enemy enemy(x, y);
-        enemies.push_back(enemy);
+void generate_enemies(std::vector<Enemy>& enemies, int level) {
+    int number_of_enemies = level * 5 - 1;
+    for (int i = 0; i < number_of_enemies; i++) {
+        int x = generate_random(10, width - 10);
+        int y = generate_random(1, 10);
+        enemies.emplace_back(x, y);
     }
 }
 
-void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level) {
+void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive) {
     system("clear");
-    std::cout << "level: " << level << std::endl;
+    std::cout << "Level: " << level << " | Boss HP: " << boss.GetHP() << std::endl;
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
                 std::cout << "*";
             } else if (i == spaceship.getY() && j == spaceship.getX()) {
-                std::cout << "^"; 
+                std::cout << "^";
             } else {
                 bool drawn = false;
 
@@ -165,9 +180,12 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
                     }
                 }
 
-                if (!drawn) {
-                    std::cout << " ";
+                if (!drawn && bossActive && boss.state() && boss.getX() == j && boss.getY() == i) {
+                    std::cout << "0";
+                    drawn = true;
                 }
+
+                if (!drawn) std::cout << " ";
             }
         }
         std::cout << std::endl;
@@ -179,16 +197,16 @@ int main() {
     int turn = 0;
     Spaceship spaceship;
     std::vector<Bullet> bullets;
+    bool bossActive = true;
+    Boss boss(20, 5); 
 
     std::vector<Enemy> enemies;
     generate_enemies(enemies, level);
 
-    int number_of_emeies = enemies.size();
+    draw_field(bullets, enemies, spaceship, level, boss, bossActive);
 
-    draw_field(bullets, enemies, spaceship, level);
-
-    while (1) {
-        char command = getch(); 
+    while (true) {
+        char command = getch();
 
         spaceship.move(command);
 
@@ -199,16 +217,20 @@ int main() {
         }
 
         for (auto& bullet : bullets) {
-            bullet.kill_enemy(enemies); 
-            bullet.move();               
-        }        
+            bullet.kill_enemy(enemies, boss, bossActive);
+            bullet.move();
+        }
 
-        bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet& bullet) {
-            return !bullet.isActiveStatus();
-        }), bullets.end());
+        bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+                                     [](Bullet& bullet) { return !bullet.isActiveStatus(); }),
+                      bullets.end());
 
         for (auto& enemy : enemies) {
             enemy.move_ememy(turn, level);
+        }
+
+        if (bossActive && boss.state()) {
+            boss.move_ememy(turn, level);
         }
 
         bool hasLiveEnemies = false;
@@ -218,35 +240,33 @@ int main() {
                 break;
             }
         }
+        if (bossActive && boss.state()) hasLiveEnemies = true;
 
         if (!hasLiveEnemies) {
             system("clear");
             std::cout << "VICTORY! Все враги уничтожены.\n";
             std::cout << "Следующий уровень? y/n\n?";
             sleep(1);
-            char command = getch();
-            if (command == 'y'){
-                system("clear");
+            char cmd = getch();
+            if (cmd == 'y') {
                 level++;
-                enemies.clear();                 
-                generate_enemies(enemies, level); 
-                bullets.clear();            
-                turn = 0;   
-                draw_field(bullets, enemies, spaceship,level);                     
-                continue;                        
-            }
-            else{
+                enemies.clear();
+                generate_enemies(enemies, level);
+                bullets.clear();
+                turn = 0;
+                boss = Boss(20, 5); 
+                bossActive = true;
+                draw_field(bullets, enemies, spaceship, level, boss, bossActive);
+                continue;
+            } else {
                 system("clear");
                 exit(0);
             }
         }
-        
 
         turn++;
-
-        draw_field(bullets, enemies, spaceship, level); 
+        draw_field(bullets, enemies, spaceship, level, boss, bossActive);
     }
 
     return 0;
 }
-
