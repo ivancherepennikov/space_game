@@ -5,21 +5,32 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <fcntl.h>
+#include <sys/select.h>
+#include <chrono>
+#include <thread>
+
 
 const int width = 41;
 const int height = 41;
 
-char getch() {
+char getch_nonblock() {
     struct termios oldt, newt;
-    char ch;
+    char ch = 0;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-    newt.c_lflag &= ~ICANON;
-    newt.c_lflag &= ~ECHO;
+    newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    int oldf = fcntl(STDIN_FILENO, F_GETFL);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
     ch = getchar();
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
     return ch;
+}
+
+void clear_screen() {
+    std::cout << "\033[2J\033[1;1H";
 }
 
 int generate_random(int min, int max) {
@@ -51,7 +62,7 @@ class Enemy {
             if (turn % 3 == 0 && isLive) {
                 y++;
                 if (y >= height - 1) {
-                    system("clear");
+                    clear_screen();
                     std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
                     exit(0);
                 }
@@ -164,7 +175,7 @@ void generate_enemies(std::vector<Enemy>& enemies, int level) {
 }
 
 void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive, int& global_counter) {
-    system("clear");
+    clear_screen();
     std::cout << "Level: " << level << " | Boss HP: " << boss.GetHP() <<" | score: " << global_counter << std::endl;
 
     for (int i = 0; i < height; i++) {
@@ -221,73 +232,82 @@ int main() {
     std::vector<Bullet> bullets;
     bool bossActive = true;
     Boss boss(20, 5); 
-
     std::vector<Enemy> enemies;
     generate_enemies(enemies, level);
 
     draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
 
+    auto last_update = std::chrono::steady_clock::now();
+
     while (true) {
-        char command = getch();
-
-        spaceship.move(command);
-
+        char command = getch_nonblock();
+        if (command == 'a' || command == 'A' || command == 'd' || command == 'D') {
+            spaceship.move(command);
+        }
         if (command == ' ') {
             Bullet new_bullet;
             new_bullet.create_bullet(spaceship.getX(), spaceship.getY());
             bullets.push_back(new_bullet);
         }
 
-        for (auto& bullet : bullets) {
-            bullet.kill_enemy(enemies, boss, bossActive, global_counter);
-            bullet.move();
-        }
-
-        bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
-                                     [](Bullet& bullet) { return !bullet.isActiveStatus(); }),
-                      bullets.end());
-
-        for (auto& enemy : enemies) {
-            enemy.move_ememy(turn, level);
-        }
-
-        if (bossActive && boss.state()) {
-            boss.move_ememy(turn, level);
-        }
-
-        bool hasLiveEnemies = false;
-        for (auto& enemy : enemies) {
-            if (enemy.state()) {
-                hasLiveEnemies = true;
-                break;
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update).count() >= 200) {
+            for (auto& bullet : bullets) {
+                bullet.kill_enemy(enemies, boss, bossActive, global_counter);
+                bullet.move();
             }
-        }
-        if (bossActive && boss.state()) hasLiveEnemies = true;
 
-        if (!hasLiveEnemies) {
-            system("clear");
-            std::cout << "VICTORY! Все враги уничтожены.\n";
-            std::cout << "Следующий уровень? y/n\n?";
-            sleep(1);
-            char cmd = getch();
-            if (cmd == 'y') {
-                level++;
-                enemies.clear();
-                generate_enemies(enemies, level);
-                bullets.clear();
-                turn = 0;
-                boss = Boss(20, 5); 
-                bossActive = true;
-                draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
-                continue;
-            } else {
-                system("clear");
-                exit(0);
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+                                        [](Bullet& bullet) { return !bullet.isActiveStatus(); }),
+                        bullets.end());
+
+            for (auto& enemy : enemies) {
+                enemy.move_ememy(turn, level);
             }
+
+            if (bossActive && boss.state()) {
+                boss.move_ememy(turn, level);
+            }
+
+            bool hasLiveEnemies = false;
+            for (auto& enemy : enemies) {
+                if (enemy.state()) {
+                    hasLiveEnemies = true;
+                    break;
+                }
+            }
+            if (bossActive && boss.state()) hasLiveEnemies = true;
+
+            if (!hasLiveEnemies) {
+                clear_screen();
+                std::cout << "VICTORY! Все враги уничтожены.\n";
+                sleep(2);
+                std::cout << "Следующий уровень? y/n\n";
+                sleep(5);
+                char cmd = getch_nonblock();
+                if (cmd == 'y') {
+                    level++;
+                    enemies.clear();
+                    generate_enemies(enemies, level);
+                    bullets.clear();
+                    turn = 0;
+                    boss = Boss(20, 5); 
+                    bossActive = true;
+                    draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
+                    last_update = std::chrono::steady_clock::now();
+                    continue;
+                } else {
+                    clear_screen();
+                    exit(0);
+                }
+            }
+
+            draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
+            turn++;
+            last_update = now;
         }
 
-        turn++;
-        draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     return 0;
