@@ -45,13 +45,13 @@ class Enemy{
             isLive = false;
         }
 
-        void move_ememy(int turn){
+        void move_ememy(int turn, int level){
             if (turn % 3 == 0){
                 if (isLive) {
                     y++;
                     if (y >= height - 1) {
                         system("clear");
-                        std::cout << "Поражение! Враг достиг края";
+                        std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне";
                         exit(0); 
                     }
                 }
@@ -134,8 +134,9 @@ void generate_enemies(std::vector<Enemy>& enemies, int level){
     }
 }
 
-void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship) {
+void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level) {
     system("clear");
+    std::cout << "level: " << level << std::endl;
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -184,7 +185,7 @@ int main() {
 
     int number_of_emeies = enemies.size();
 
-    draw_field(bullets, enemies, spaceship);
+    draw_field(bullets, enemies, spaceship, level);
 
     while (1) {
         char command = getch(); 
@@ -207,7 +208,7 @@ int main() {
         }), bullets.end());
 
         for (auto& enemy : enemies) {
-            enemy.move_ememy(turn);
+            enemy.move_ememy(turn, level);
         }
 
         bool hasLiveEnemies = false;
@@ -231,7 +232,7 @@ int main() {
                 generate_enemies(enemies, level); 
                 bullets.clear();            
                 turn = 0;   
-                draw_field(bullets, enemies, spaceship);                     
+                draw_field(bullets, enemies, spaceship,level);                     
                 continue;                        
             }
             else{
@@ -243,7 +244,7 @@ int main() {
 
         turn++;
 
-        draw_field(bullets, enemies, spaceship); 
+        draw_field(bullets, enemies, spaceship, level); 
     }
 
     return 0;
