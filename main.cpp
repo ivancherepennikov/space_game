@@ -118,17 +118,19 @@ public:
         }
     }
 
-    void kill_enemy(std::vector<Enemy>& enemies, Boss& boss, bool& bossActive) {
+    void kill_enemy(std::vector<Enemy>& enemies, Boss& boss, bool& bossActive, int& global_counter) {
         for (auto& enemy : enemies) {
             if (enemy.getX() == x && enemy.getY() == y && enemy.state()) {
                 enemy.kill_enemy(); 
                 isActive = false;  
+                global_counter++;
                 return;
             }
         }
     
         if (bossActive && boss.state() && boss.getX() == x && boss.getY() == y) {
             boss.take_damage();
+            global_counter++;
             if (!boss.state()) bossActive = false;
             isActive = false;
         } 
@@ -161,9 +163,9 @@ void generate_enemies(std::vector<Enemy>& enemies, int level) {
     }
 }
 
-void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive) {
+void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive, int& global_counter) {
     system("clear");
-    std::cout << "Level: " << level << " | Boss HP: " << boss.GetHP() << std::endl;
+    std::cout << "Level: " << level << " | Boss HP: " << boss.GetHP() <<" | score: " << global_counter << std::endl;
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -214,6 +216,7 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
 int main() {
     int level = 1;
     int turn = 0;
+    int global_counter = 0;
     Spaceship spaceship;
     std::vector<Bullet> bullets;
     bool bossActive = true;
@@ -222,7 +225,7 @@ int main() {
     std::vector<Enemy> enemies;
     generate_enemies(enemies, level);
 
-    draw_field(bullets, enemies, spaceship, level, boss, bossActive);
+    draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
 
     while (true) {
         char command = getch();
@@ -236,7 +239,7 @@ int main() {
         }
 
         for (auto& bullet : bullets) {
-            bullet.kill_enemy(enemies, boss, bossActive);
+            bullet.kill_enemy(enemies, boss, bossActive, global_counter);
             bullet.move();
         }
 
@@ -275,7 +278,7 @@ int main() {
                 turn = 0;
                 boss = Boss(20, 5); 
                 bossActive = true;
-                draw_field(bullets, enemies, spaceship, level, boss, bossActive);
+                draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
                 continue;
             } else {
                 system("clear");
@@ -284,7 +287,7 @@ int main() {
         }
 
         turn++;
-        draw_field(bullets, enemies, spaceship, level, boss, bossActive);
+        draw_field(bullets, enemies, spaceship, level, boss, bossActive, global_counter);
     }
 
     return 0;
