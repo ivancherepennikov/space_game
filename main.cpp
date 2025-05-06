@@ -167,12 +167,27 @@ public:
 
 void generate_enemies(std::vector<Enemy>& enemies, int level) {
     int number_of_enemies = level * 5 - 1;
-    for (int i = 0; i < number_of_enemies; i++) {
+    int k = 0;
+
+    while (k < number_of_enemies) {
         int x = generate_random(10, width - 10);
         int y = generate_random(1, 10);
-        enemies.emplace_back(x, y);
+        bool position_taken = false;
+
+        for (int i = 0; i < enemies.size(); i++) {
+            if (x == enemies[i].getX() && y == enemies[i].getY()) {
+                position_taken = true;
+                break;
+            }
+        }
+
+        if (!position_taken) {
+            enemies.emplace_back(x, y);
+            k++;
+        }
     }
 }
+
 
 void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive, int& global_counter) {
     clear_screen();
