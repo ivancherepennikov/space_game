@@ -57,10 +57,26 @@ class Enemy {
             isLive = false;
             hasAnimationShown = false; 
         }
-    
+
+        void set_position(int new_x, int new_y) {
+            x = new_x;
+            y = new_y;
+        }        
+
         void move_ememy(int turn, int level) {
             if (turn % 3 == 0 && isLive) {
-                y++;
+                int way = generate_random(1,3);
+                if (way == 1){
+                    x++;
+                    y++;
+                }
+                if (way == 2){
+                    y++;
+                }
+                if (way == 3){
+                    x--;
+                    y++;
+                }
                 if (y >= height - 1) {
                     clear_screen();
                     std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
@@ -188,6 +204,53 @@ void generate_enemies(std::vector<Enemy>& enemies, int level) {
     }
 }
 
+void move_enemies(std::vector<Enemy>& enemies, int turn, int level) {
+    if (turn % 3 != 0) return;
+
+    std::vector<std::pair<int, int>> planned_positions;
+
+    for (auto& enemy : enemies) {
+        if (!enemy.state()) {
+            planned_positions.push_back({enemy.getX(), enemy.getY()});
+            continue;
+        }
+
+        int new_x = enemy.getX();
+        int new_y = enemy.getY() + 1;
+        int way = generate_random(1, 5);
+
+        if (way == 1){ 
+            new_x++;
+        }
+        else if (way == 5){
+            new_x--;
+        }
+
+        new_x = std::max(1, std::min(width - 2, new_x));
+        new_y = std::max(1, std::min(height - 2, new_y));
+
+        bool conflict = false;
+        for (const auto& pos : planned_positions) {
+            if (pos.first == new_x && pos.second == new_y) {
+                conflict = true;
+                break;
+            }
+        }
+
+        if (!conflict) {
+            enemy.set_position(new_x, new_y);
+            planned_positions.emplace_back(new_x, new_y);
+        } else {
+            planned_positions.emplace_back(enemy.getX(), enemy.getY());
+        }
+
+        if (enemy.getY() >= height - 2) {
+            clear_screen();
+            std::cout << "Поражение! Враг достиг края\nВы проиграли на " << level << " уровне\n";
+            exit(0);
+        }
+    }
+}
 
 void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Spaceship& spaceship, int level, Boss& boss, bool bossActive, int& global_counter) {
     clear_screen();
@@ -276,9 +339,7 @@ int main() {
                                         [](Bullet& bullet) { return !bullet.isActiveStatus(); }),
                         bullets.end());
 
-            for (auto& enemy : enemies) {
-                enemy.move_ememy(turn, level);
-            }
+            move_enemies(enemies, turn, level);
 
             if (bossActive && boss.state()) {
                 boss.move_ememy(turn, level);
