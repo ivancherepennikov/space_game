@@ -64,16 +64,13 @@ class Enemy {
         }        
 
         void move_ememy(int turn, int level) {
-            if (turn % 3 == 0 && isLive) {
-                int way = generate_random(1,3);
+            if (turn % 2 == 0 && isLive) {
+                int way = generate_random(1,5);
                 if (way == 1){
                     x++;
                     y++;
                 }
-                if (way == 2){
-                    y++;
-                }
-                if (way == 3){
+                if (way == 5){
                     x--;
                     y++;
                 }
@@ -259,15 +256,15 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
-                std::cout << "*";
+                std::cout << "🌲";
             } else if (i == spaceship.getY() && j == spaceship.getX()) {
-                std::cout << "^";
+                std::cout << "🛸";
             } else {
                 bool drawn = false;
 
                 for (Bullet& bullet : bullets) {
                     if (bullet.isActiveStatus() && bullet.getX() == j && bullet.getY() == i) {
-                        std::cout << "!";
+                        std::cout << "💥";
                         drawn = true;
                         break;
                     }
@@ -276,13 +273,13 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
                 if (!drawn) {
                     for (Enemy& enemy : enemies) {
                         if (enemy.state() && enemy.getX() == j && enemy.getY() == i) {
-                            std::cout << "@";
+                            std::cout << "👾";
                             drawn = true;
                             break;
                         } 
 
                         else if (enemy.is_destroyed() && !enemy.is_animation_shown() && enemy.getX() <= j && enemy.getX() + 2 >= j && enemy.getY() <= i && enemy.getY() + 2 >= i) {
-                            std::cout << "#";
+                            std::cout << "💣";
                             enemy.show_animation();  
                             drawn = true;
                             break;
@@ -291,11 +288,11 @@ void draw_field(std::vector<Bullet>& bullets, std::vector<Enemy>& enemies, Space
                 }
 
                 if (!drawn && bossActive && boss.state() && boss.getX() == j && boss.getY() == i) {
-                    std::cout << "0";
+                    std::cout << "👹";
                     drawn = true;
                 }
 
-                if (!drawn) std::cout << " ";
+                if (!drawn) std::cout << "  ";
             }
         }
         std::cout << std::endl;
@@ -329,7 +326,7 @@ int main() {
         }
 
         auto now = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update).count() >= 200) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update).count() >= 150) {
             for (auto& bullet : bullets) {
                 bullet.kill_enemy(enemies, boss, bossActive, global_counter);
                 bullet.move();
