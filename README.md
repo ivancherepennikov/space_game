@@ -1,6 +1,6 @@
-👾 Terminal Space Shooter
+👾 Терминальная коспическая стрелялка
 
-A classic-style 2D space shooter game running directly in your terminal!
+Классически 2D шутер в терминале!
 
 🚀 Описание
 
@@ -19,4 +19,4 @@ A classic-style 2D space shooter game running directly in your terminal!
 g++ -std=c++11 -o space_shooter main.cpp
 ./space_shooter
 
-Примечание: Игра предназначена для запуска в Unix-подобной среде (Linux, macOS). На Windows работа возможна только в WSL или Cygwin/MSYS2.
+Примечание: Игра предназначена для запуска в Unix-подобной среде (Linux, macOS).
