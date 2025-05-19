@@ -16,7 +16,7 @@
 | `Space` | Выстрел         |
 
 🔧 Сборка и запуск
-g++ -std=c++11 -o space_shooter main.cpp
-./space_shooter
+g++ -std=c++17 main.cpp enemies.cpp bullets.cpp players.cpp game_utils.cpp -o spacegame
+./spacegame
 
 Примечание: Игра предназначена для запуска в Unix-подобной среде (Linux, macOS).
